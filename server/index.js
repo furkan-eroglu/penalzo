@@ -6,16 +6,12 @@ import { randomBytes, randomInt } from 'node:crypto';
 import { WebSocketServer } from 'ws';
 import * as db from './db.js';
 import { sanitizeLook, DEFAULT_LOOK } from '../shared/look.js';
+import { PICK_MS, BOTH_PICKED_MS, RESULT_MS, INTRO_MS, ZONES, isGoal, rolesOf, decideWinner } from '../shared/rules.js';
 
 const PORT = Number(process.env.PORT) || 3000;
 const DIST = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'dist');
 
-const PICK_MS = 5000; // seçim süresi
-const PICK_GRACE_MS = 700; // ağ gecikmesi payı
-const BOTH_PICKED_MS = 650; // ikisi de seçince kısa bekleme
-const RESULT_MS = 6200; // şut animasyonu süresi
-const INTRO_MS = 2800; // maç başı tanıtım
-const KICKS = 5;
+const PICK_GRACE_MS = 700; // ağ gecikmesi payı (süreler ve kurallar shared/rules.js içinde)
 
 const USERNAME_RE = /^[a-z0-9_.]{3,16}$/;
 const NAME_RE = /^[\p{L}\p{N} _.\-]{2,12}$/u;
@@ -172,10 +168,6 @@ function leaveRoom(p, silent) {
   if (room.state === 'playing' && other) endMatch(room, other, 'left');
   room.players = room.players.filter((id) => id !== p.id);
   if (!silent) send(p, { type: 'roomLeft' });
-  if (room.bot && room.players.every((id) => id === room.bot)) {
-    online.delete(room.bot);
-    room.players = [];
-  }
   if (!room.players.length) {
     clearTimeout(room.match?.timer);
     rooms.delete(room.code);
@@ -201,14 +193,9 @@ function startRound(room) {
   if (!m) return;
   m.picks = {};
   m.phase = 'pick';
-  m.shooter = m.order[m.k % 2];
-  m.keeper = m.order[(m.k + 1) % 2];
+  ({ shooter: m.shooter, keeper: m.keeper } = rolesOf(m.order, m.k));
   broadcast(room, { type: 'round', k: m.k, shooterId: m.shooter, keeperId: m.keeper, pickMs: PICK_MS });
   m.timer = setTimeout(() => resolveRound(room), PICK_MS + PICK_GRACE_MS);
-  if (room.bot) {
-    const k = m.k;
-    setTimeout(() => { if (room.match === m && m.k === k) registerPick(room, room.bot, randomInt(3) - 1); }, 700 + randomInt(2600));
-  }
 }
 
 function registerPick(room, id, zone) {
@@ -222,20 +209,6 @@ function registerPick(room, id, zone) {
   return true;
 }
 
-// ---- antrenman botu
-const BOT_COLORS = ['#2563eb', '#16a34a', '#f97316', '#8b5cf6', '#111827', '#14b8a6', '#facc15', '#ffffff'];
-const pickColor = () => BOT_COLORS[randomInt(BOT_COLORS.length)];
-function makeBot(code) {
-  const look = sanitizeLook({
-    number: randomInt(1, 100), hair: randomInt(10),
-    player: { jersey: pickColor(), shorts: pickColor(), socks: pickColor(), boots: pickColor() },
-    keeper: { jersey: pickColor(), shorts: '#111827', boots: pickColor(), gloves: pickColor() },
-  });
-  const bot = { id: 'b:' + randomBytes(6).toString('hex'), guest: true, bot: true, name: 'Bot', look, ws: null, room: code };
-  online.set(bot.id, bot);
-  return bot;
-}
-
 function resolveRound(room) {
   const m = room.match;
   if (!m || m.phase !== 'pick') return;
@@ -243,7 +216,7 @@ function resolveRound(room) {
   m.phase = 'anim';
   const shot = m.picks[m.shooter] ?? 0; // seçmeyen ortayı seçmiş sayılır
   const dive = m.picks[m.keeper] ?? 0;
-  const goal = shot !== dive;
+  const goal = isGoal(shot, dive);
   m.kicks[m.shooter].push(goal);
   broadcast(room, {
     type: 'result', k: m.k, shooterId: m.shooter, keeperId: m.keeper, shot, dive, goal,
@@ -251,12 +224,8 @@ function resolveRound(room) {
   });
   m.k++;
   const [a, b] = m.order;
-  const sa = m.kicks[a].filter(Boolean).length;
-  const sb = m.kicks[b].filter(Boolean).length;
-  // ilk 5'er atışta: geride olan kalan atışlarıyla yetişemiyorsa maç biter; sonrası seri penaltı
-  const ra = Math.max(0, KICKS - m.kicks[a].length), rb = Math.max(0, KICKS - m.kicks[b].length);
-  const done = m.k < KICKS * 2 ? sa > sb + rb || sb > sa + ra : m.k % 2 === 0 && sa !== sb;
-  m.timer = setTimeout(() => (done ? endMatch(room, sa > sb ? a : b, 'score') : startRound(room)), RESULT_MS);
+  const w = decideWinner(m.kicks[a], m.kicks[b], m.k);
+  m.timer = setTimeout(() => (w ? endMatch(room, w === 'a' ? a : b, 'score') : startRound(room)), RESULT_MS);
 }
 
 function endMatch(room, winnerId, reason) {
@@ -319,17 +288,8 @@ const handlers = {
     const room = p.room && rooms.get(p.room);
     const mt = room?.match;
     if (!mt || mt.phase !== 'pick' || m.k !== mt.k) return;
-    if (![-1, 0, 1].includes(m.zone)) return;
+    if (!ZONES.includes(m.zone)) return;
     if (registerPick(room, p.id, m.zone)) send(p, { type: 'picked', k: mt.k, zone: m.zone });
-  },
-  practice(p) {
-    leaveRoom(p, true);
-    const code = newCode();
-    const bot = makeBot(code);
-    const room = { code, hostId: p.id, players: [p.id, bot.id], state: 'lobby', match: null, bot: bot.id };
-    rooms.set(code, room);
-    p.room = code;
-    startMatch(room);
   },
   invite(p, m) {
     if (p.guest) return;
