@@ -53,13 +53,21 @@ The rules are intentionally minimal; the outcome depends on anticipating the opp
 
 The in-game UI is currently in Turkish.
 
+## Download (Android)
+
+[**Releases**](https://github.com/furkan-eroglu/penalzo/releases) contains `Penalzo-v0.1.0-offline.apk`, an Android build you can install and play right away.
+
+- **Offline build:** practice against the bot and the character editor work without any server. Multiplayer (rooms, friends, invites) needs a deployed server, which this build does not connect to.
+- **Debug-signed:** Android will ask you to allow installation from unknown sources.
+- Checked on an Android 17 emulator (API 37): launch, menu, editor, a full touch-controlled match.
+
 ## Features
 
 - **Duel rules** - 5 kicks each, alternating. Ends as soon as the result is mathematically decided; a tie goes to sudden death (one kick each until someone leads).
 - **Multiplayer** - private rooms with a 5-character code, or invite a friend straight from your friends list (accept / decline pop-up).
 - **Accounts** - register / log in, or play as a guest (guests cannot add friends or invite).
 - **Friends** - friend requests, accept / decline, live online and in-game status.
-- **Practice mode** - play against a bot with a random kit.
+- **Practice mode** - play against a bot with a random kit. It runs entirely on the device, so it works without a server (see [Download](#download-android)).
 - **Character editor** - shirt, shorts, socks, boots, goalkeeper gloves, 10 hair styles + hair colour, shirt number 1-99 (numeric keypad on phones). The shirt back shows your in-game name and number.
 - **Everything is generated in code** - characters, hair, stadium, crowd, ball, trophy, all animation (procedural pose blending), textures (canvas) and sound (Web Audio). There are no 3D model, texture or audio files in the repo.
 
@@ -121,6 +129,10 @@ stateDiagram-v2
   Pick --> Lobby: opponent left (forfeit)
 ```
 
+### Shared rules
+
+Match rules and timings live in `shared/rules.js` (goal rule, who shoots when, early finish, sudden death, pick and result durations). The multiplayer server and the on-device practice engine (`client/src/practice.js`) both import it, so the two modes cannot drift apart. The practice engine emits the same messages the server sends, so the screens do not know which one they are talking to.
+
 ### Protocol
 
 | Direction | Messages |
@@ -142,6 +154,11 @@ stateDiagram-v2
 ### Tests
 
 `npm test` runs an end-to-end script (28 assertions) against a running server with real WebSocket clients: registration and login validation, duplicate / wrong credentials, friend request flow and presence, room creation, invite delivery, guest restrictions, full-room rejection, and a complete match checking the goal rule, "no pick = middle", alternating shooters, that the match ends *exactly* when the result is decided (and goes to sudden death on a tie), forfeit on leave, and presence after disconnect.
+
+`npm run test:unit` (Node's built-in test runner, no server needed) covers the shared rules and the practice engine:
+
+- The early-finish rule is checked against brute force: for every possible sequence of kicks, the match must end at the first kick after which no completion of the remaining kicks can change the winner, and never earlier or later.
+- The practice engine is played to the end many times and checked against the protocol: round order, goal rule, "no pick = middle", ignored duplicate / stale / invalid picks, copied kick lists, correct winner, and no messages after `stop()`.
 
 The game has also been played manually in a desktop browser (mobile viewport) and on an Android phone using a debug build.
 
@@ -165,7 +182,8 @@ npm run client   # game on http://localhost:5173 (proxies to the server)
 Open the game in two tabs to play against yourself - the second tab as `http://localhost:5173/?p=2` keeps a separate login.
 
 ```bash
-npm test         # end-to-end server test (~1.5 min), server must be running
+npm run test:unit   # rules and practice engine, no server needed (~25 s)
+npm test            # end-to-end server test (~1.5 min), server must be running
 ```
 
 ### Production
@@ -192,6 +210,7 @@ The native shell loads the bundled client, so the server address is baked in at 
 ```bash
 echo "VITE_SERVER_URL=https://penalzo.example.com" > .env.production
 npm run android   # build, sync, open Android Studio
+npm run android:offline   # offline-only build (no server needed), then run `./gradlew assembleDebug` in android/
 npm run ios       # macOS only (run `npx cap add ios` first)
 ```
 
@@ -201,10 +220,10 @@ Release builds expect an HTTPS/WSS server. To try a debug build against a plain-
 
 ```
 server/   index.js (HTTP + WebSocket + match engine), db.js (SQLite, auth, friends)
-shared/   look.js (character schema + validation used by both sides)
-client/   src/main.js (UI + flow), net.js, audio.js
+shared/   look.js (character schema + validation), rules.js (match rules and timings, used by server and client)
+client/   src/main.js (UI + flow), net.js, audio.js, practice.js (on-device bot match engine)
           src/three/ stage.js, character.js, hair.js, anim.js, env.js, thumbs.js
-scripts/  e2e.mjs
+scripts/  e2e.mjs (server end-to-end), rules.test.mjs and practice.test.mjs (unit tests)
 android/  Capacitor Android project
 docs/     banner and screenshots used in this README
 ```

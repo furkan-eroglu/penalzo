@@ -43,13 +43,21 @@ Aynı bölge = kurtarış, farklı bölge = gol. Kurallar bilinçli olarak sade 
   </tr>
 </table>
 
+## İndir (Android)
+
+[**Releases**](https://github.com/furkan-eroglu/penalzo/releases) bölümündeki `Penalzo-v0.1.0-offline.apk` dosyasını kurup hemen oynayabilirsin.
+
+- **Çevrimdışı sürüm:** bota karşı oynama ve oyuncu düzenleme sunucusuz çalışır. Çok oyunculu mod (oda, arkadaş, davet) yayında bir sunucu gerektirir, bu sürüm sunucuya bağlanmaz.
+- **Debug imzalı:** Android, bilinmeyen kaynaklardan kuruluma izin vermeni isteyecek.
+- Android 17 emülatöründe (API 37) denendi: açılış, menü, düzenleyici ve dokunmayla oynanan tam bir maç.
+
 ## Özellikler
 
 - **Kurallar:** 5'er atış, sırayla. Sonuç matematiksel olarak kesinleştiği anda maç biter; beraberlikte birer birer seri penaltı oynanır.
 - **Çok oyunculu:** 5 karakterlik oda koduyla özel oda ya da arkadaş listesinden doğrudan davet (kabul / reddet bildirimi).
 - **Hesaplar:** kayıt ol / giriş yap ya da misafir olarak oyna (misafir arkadaş ekleyemez, davet edemez).
 - **Arkadaşlar:** istek gönderme, kabul / reddet, çevrimiçi ve oyunda durumu.
-- **Antrenman:** rastgele takımlı bota karşı oyna.
+- **Antrenman:** rastgele takımlı bota karşı oyna. Tamamen cihazda çalışır, sunucu gerekmez; çok oyunculu sunucuyla aynı kural modülünü (`shared/rules.js`) kullanır.
 - **Oyuncu düzenleme:** forma, şort, çorap, krampon, kaleci eldiveni, 10 saç stili ve saç rengi, 1-99 forma numarası. Formanın sırtında oyun içi adın ve numaran yazar.
 - **Her şey kodla üretilir:** karakterler, saçlar, stadyum, seyirci, top, kupa, animasyonlar, dokular ve sesler. Depoda hazır 3D model, doku ya da ses dosyası yoktur.
 
@@ -62,6 +70,7 @@ Tek bir Node.js süreci REST uçlarını, WebSocket oyun protokolünü ve derlen
 - Şifreler **scrypt** ve kullanıcıya özel tuzla saklanır; oturum anahtarlarının yalnızca SHA-256 özeti veritabanına yazılır. Tüm girdiler sunucuda doğrulanır (görünüm şeması `shared/look.js` ile istemciyle ortaktır).
 - Maç sırasında odadan ayrılan oyuncu hükmen yenilir; çevrimiçi durum değişiklikleri arkadaşlara anlık iletilir.
 - `npm test`: gerçek WebSocket istemcileriyle 28 doğrulamalık uçtan uca test (kayıt, arkadaşlık, davet, oda, maç kuralları, erken bitiş, seri penaltı, hükmen galibiyet).
+- `npm run test:unit`: sunucusuz birim testleri. Erken bitiş kuralı, olası tüm atış dizileri denenerek (kaba kuvvet) doğrulanır; çevrimdışı antrenman motoru protokole göre oynatılıp kontrol edilir.
 
 Ayrıntılı protokol, durum makinesi diyagramları ve **bilinen sınırlamalar** için [İngilizce README](README.md#backend) bölümüne bakın.
 
