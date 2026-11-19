@@ -1,5 +1,8 @@
 const BASE = (import.meta.env.VITE_SERVER_URL || '').replace(/\/$/, '');
 
+// Çevrimdışı sürüm (vite build --mode offline): sunucu yoktur, yalnızca antrenman modu açıktır.
+export const hasServer = !import.meta.env.VITE_OFFLINE_ONLY;
+
 export async function api(path, body) {
   let r;
   try {
@@ -9,7 +12,7 @@ export async function api(path, body) {
       body: JSON.stringify(body || {}),
     });
   } catch {
-    throw new Error('Sunucuya ulaşılamadı');
+    throw new Error('Sunucuya ulaşılamadı. Çevrimdışı oynayabilirsin.');
   }
   const j = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(j.error || 'Bir hata oluştu');

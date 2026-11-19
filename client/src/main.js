@@ -6,7 +6,8 @@ import './style.css';
 import { Stage } from './three/stage.js';
 import { HAIR_NAMES } from './three/character.js';
 import { hairThumbs } from './three/thumbs.js';
-import { api, Socket } from './net.js';
+import { api, Socket, hasServer } from './net.js';
+import { createPractice, ME_ID } from './practice.js';
 import { sfx, unlock, ambience, setMuted, isMuted } from './audio.js';
 import { BALL, GLOVE, ICON } from './icons.js';
 import { DEFAULT_LOOK, sanitizeLook } from '../../shared/look.js';
@@ -72,8 +73,12 @@ function showLanding() {
   setScreen('landing', `
     <div class="logo-wrap"><div class="logo">PENAL<span>ZO</span></div><div class="tagline">Kararı penaltılar versin</div></div>
     <div class="bottom">
-      <button class="btn primary" data-act="authOpen">Kayıt Ol / Giriş Yap</button>
-      <button class="btn link" data-act="guest">Misafir olarak giriş yap</button>
+      ${hasServer
+        ? `<button class="btn primary" data-act="authOpen">Kayıt Ol / Giriş Yap</button>
+           <button class="btn dark" data-act="local">Çevrimdışı oyna</button>
+           <button class="btn link" data-act="guest">Misafir olarak giriş yap</button>`
+        : `<button class="btn primary big" data-act="local">Oyna</button>
+           <div class="hint">Çevrimdışı sürüm: botla oynayabilir ve oyuncunu düzenleyebilirsin.<br/>Çok oyunculu mod için sunucu gerekir.</div>`}
     </div>`);
 }
 
@@ -142,26 +147,29 @@ function showNamePick() {
 function showMenu() {
   closeSheet();
   S.room = null;
-  S.practice = false;
   stage.setMode('menu');
   stage.setSolo(myLook(), 'player', S.me.name);
   stage.faceSolo(false);
   ambience(true);
-  const g = S.me.guest;
+  const g = S.me.guest, local = !!S.me.local;
   setScreen('menu', `
     <div class="topbar">
-      <div class="who"><div class="nm">${esc(S.me.name)}</div><div class="sub">${g ? 'Misafir' : '@' + esc(S.me.username)}</div></div>
+      <div class="who"><div class="nm">${esc(S.me.name)}</div><div class="sub">${local ? 'Çevrimdışı' : g ? 'Misafir' : '@' + esc(S.me.username)}</div></div>
       <div class="row">
         <button class="icon-btn" data-act="mute" aria-label="Ses">${isMuted() ? ICON.mute : ICON.sound}</button>
         ${g ? '' : `<button class="icon-btn" data-act="friends" aria-label="Arkadaşlar">${ICON.friends}${reqCount() ? `<i class="badge">${reqCount()}</i>` : ''}</button>`}
-        <button class="icon-btn" data-act="logout" aria-label="Çıkış">${ICON.logout}</button>
+        ${local ? (hasServer ? `<button class="icon-btn" data-act="localExit" aria-label="Çevrimdışı moddan çık">${ICON.logout}</button>` : '') : `<button class="icon-btn" data-act="logout" aria-label="Çıkış">${ICON.logout}</button>`}
       </div>
     </div>
     <div class="logo small">PENAL<span>ZO</span></div>
     <div class="bottom">
-      <button class="btn primary big" data-act="create">Oyun Kur</button>
-      <div class="row2"><button class="btn" data-act="joinOpen">Oyuna Katıl</button><button class="btn" data-act="practice">Bota Karşı</button></div>
+      ${local
+        ? `<button class="btn primary big" data-act="practice">Bota Karşı Oyna</button>`
+        : `<button class="btn primary big" data-act="create">Oyun Kur</button>
+           <div class="row2"><button class="btn" data-act="joinOpen">Oyuna Katıl</button><button class="btn" data-act="practice">Bota Karşı</button></div>`}
       <button class="btn dark" data-act="editor">${ICON.edit}Oyuncuyu Düzenle</button>
+      ${local && hasServer ? `<button class="btn link" data-act="localExit">Çevrimiçi oyna</button>` : ''}
+      ${local && !hasServer ? `<div class="hint">Çok oyunculu mod için sunucu bağlantısı gerekir.</div>` : ''}
     </div>`);
 }
 
@@ -409,7 +417,8 @@ function tryPick(e) {
   m.myZone = zone;
   stage.selectZone(zone);
   sfx.select();
-  sock.send('pick', { k: m.k, zone });
+  if (practiceEngine) practiceEngine.pick(m.k, zone);
+  else sock.send('pick', { k: m.k, zone });
   const t = $('#roleText');
   if (t) t.textContent = 'Seçildi! Rakip bekleniyor…';
 }
@@ -479,6 +488,31 @@ function showInvite(msg) {
   inviteTimer = setTimeout(() => (noticeEl.innerHTML = ''), 25000);
 }
 
+// ------------------------------------------------------------ çevrimdışı mod ve antrenman
+// Antrenman (bota karşı) tamamen istemcide çalışır; sunucuyla aynı kurallar ve mesaj biçimleri kullanılır.
+let practiceEngine = null;
+function stopPractice() { practiceEngine?.stop(); practiceEngine = null; }
+function startPractice() {
+  stopPractice();
+  practiceEngine = createPractice({ me: S.me, emit: (msg) => matchHandlers[msg.type]?.(msg) });
+  practiceEngine.start();
+}
+function startLocal() {
+  stopPractice();
+  let saved = null;
+  try { saved = JSON.parse(store.get('look')); } catch {}
+  S.me = { id: ME_ID, name: 'Oyuncu', guest: true, username: null, local: true, look: sanitizeLook(saved) };
+  S.room = null; S.match = null;
+  S.friends = { friends: [], incoming: [], outgoing: [] };
+  fade(showMenu);
+}
+function leaveLocal() {
+  stopPractice();
+  S.me = null; S.room = null; S.match = null;
+  const token = hasServer && store.get('token');
+  if (token) { fade(() => { ui.innerHTML = ''; }); sock.open(token); } else fade(showLanding);
+}
+
 // ------------------------------------------------------------ tıklamalar
 const actions = {
   landing: showLanding,
@@ -515,11 +549,17 @@ const actions = {
   },
   closeSheet,
   create: () => sock.send('createRoom'),
-  practice: () => { S.practice = true; sock.send('practice'); },
+  practice: startPractice,
+  local() { sock.close(); S.offline = false; $('#offline')?.remove(); startLocal(); },
+  localExit: leaveLocal,
   joinOpen: openJoin,
-  leave: () => { if (S.room || S.practice) sock.send('leaveRoom'); else showMenu(); },
+  leave() {
+    if (practiceEngine) { stopPractice(); fade(showMenu); }
+    else if (S.room) sock.send('leaveRoom');
+    else showMenu();
+  },
   start: () => sock.send('start'),
-  again: () => (S.practice ? sock.send('practice') : S.room ? fade(showRoom) : fade(showMenu)),
+  again: () => (practiceEngine ? startPractice() : S.room ? fade(showRoom) : fade(showMenu)),
   copyCode() {
     navigator.clipboard?.writeText(S.room.code).then(() => toast('Oda kodu kopyalandı'), () => toast('Kod: ' + S.room.code));
   },
@@ -619,16 +659,20 @@ sock.on('room', (m) => {
   fade(showRoom);
 });
 sock.on('roomLeft', () => { S.room = null; fade(showMenu); });
-sock.on('matchStart', onMatchStart);
-sock.on('round', onRound);
-sock.on('picked', (m) => { if (M()) stage.selectZone(m.zone); });
-sock.on('result', onResult);
-sock.on('matchEnd', onMatchEnd);
+// Maç mesajları sunucudan da (çok oyunculu) çevrimdışı motordan da aynı işleyicilere gelir.
+const matchHandlers = {
+  matchStart: onMatchStart,
+  round: onRound,
+  picked: (m) => { if (M()) stage.selectZone(m.zone); },
+  result: onResult,
+  matchEnd: onMatchEnd,
+};
+for (const [type, fn] of Object.entries(matchHandlers)) sock.on(type, fn);
 sock.on('invited', showInvite);
 sock.onState = () => {
   if (S.offline) return;
   S.offline = true;
-  if (!$('#offline')) document.body.insertAdjacentHTML('beforeend', '<div id="offline"><div class="spin"></div>Bağlantı kuruluyor…</div>');
+  if (!$('#offline')) document.body.insertAdjacentHTML('beforeend', '<div id="offline"><div class="spin"></div>Bağlantı kuruluyor…<button class="btn dark" data-act="local">Çevrimdışı oyna</button></div>');
 };
 
 // ------------------------------------------------------------ başlat
@@ -637,7 +681,7 @@ async function boot() {
   stage = new Stage(canvas);
   window.__penalzo = { stage, S };
   setMuted(!!store.get('muted'));
-  const token = store.get('token');
+  const token = hasServer ? store.get('token') : null;
   showLanding();
   if (token) {
     ui.innerHTML = '';

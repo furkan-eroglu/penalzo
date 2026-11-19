@@ -226,3 +226,7 @@ input.num-input { align-self: center; width: 170px !important; height: 110px !im
 .wname { font-size: min(clamp(64px, 20vw, 104px), calc(var(--col) * 0.88 / (var(--n, 6) * 0.53))); line-height: 1.12; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; overflow-wrap: normal; padding: 0 4px; }
 .final { margin-top: 2px; }
 .ed-tabs button { scroll-snap-align: start; }
+
+/* ---------- çevrimdışı mod */
+#offline { text-align: center; padding: 0 24px; }
+#offline .btn { width: auto; padding: 0 28px; margin-top: 6px; }

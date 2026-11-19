@@ -5,3 +5,5 @@ data/
 *.apk
 .claude/
 *.log
+.env.production
+.env.local
