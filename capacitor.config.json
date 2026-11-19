@@ -1,0 +1,13 @@
+{
+  "appId": "com.penalzo.app",
+  "appName": "Penalzo",
+  "webDir": "dist",
+  "backgroundColor": "#07101f",
+  "android": {
+    "backgroundColor": "#07101f"
+  },
+  "ios": {
+    "backgroundColor": "#07101f",
+    "contentInset": "never"
+  }
+}
