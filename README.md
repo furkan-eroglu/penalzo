@@ -22,7 +22,7 @@
 Friends who can't agree on what to do usually flip a coin or play rock-paper-scissors.
 **Penalzo** replaces that with a penalty duel: one player shoots, the other keeps goal, then they swap - five kicks each.
 Both players secretly pick one of three zones (left / middle / right) within 5 seconds. Same zone = save, different zone = goal.
-It is a game of nerve and mind-reading, and it is intentionally simple.
+The rules are intentionally minimal; the outcome depends on anticipating the opponent's choice.
 
 ## Demo
 
@@ -30,7 +30,7 @@ It is a game of nerve and mind-reading, and it is intentionally simple.
   <tr>
     <td align="center"><img src="docs/media/goal.gif" width="230" alt="Goal" /><br/><sub>Goal in the top corner</sub></td>
     <td align="center"><img src="docs/media/save.gif" width="230" alt="Save" /><br/><sub>Keeper dives and saves</sub></td>
-    <td align="center"><img src="docs/media/trophy.gif" width="230" alt="Winner" /><br/><sub>Winner lifts the trophy, loser cries</sub></td>
+    <td align="center"><img src="docs/media/trophy.gif" width="230" alt="Winner" /><br/><sub>Winner with the trophy, loser dejected</sub></td>
   </tr>
 </table>
 
@@ -63,7 +63,7 @@ The in-game UI is currently in Turkish.
 - **Character editor** - shirt, shorts, socks, boots, goalkeeper gloves, 10 hair styles + hair colour, shirt number 1-99 (numeric keypad on phones). The shirt back shows your in-game name and number.
 - **Everything is generated in code** - characters, hair, stadium, crowd, ball, trophy, all animation (procedural pose blending), textures (canvas) and sound (Web Audio). There are no 3D model, texture or audio files in the repo.
 
-## Backend (the interesting part)
+## Backend
 
 A single Node.js process serves the REST endpoints, the WebSocket game protocol and the built client.
 
@@ -143,13 +143,14 @@ stateDiagram-v2
 
 `npm test` runs an end-to-end script (28 assertions) against a running server with real WebSocket clients: registration and login validation, duplicate / wrong credentials, friend request flow and presence, room creation, invite delivery, guest restrictions, full-room rejection, and a complete match checking the goal rule, "no pick = middle", alternating shooters, that the match ends *exactly* when the result is decided (and goes to sudden death on a tie), forfeit on leave, and presence after disconnect.
 
-### Known limitations (honest list)
+The game has also been played manually in a desktop browser (mobile viewport) and on an Android phone using a debug build.
+
+### Known limitations
 
 - Rooms and running matches live in memory: a server restart drops live games (accounts and friends are persisted). One node only; scaling out would need shared room state (e.g. Redis) or sticky routing.
 - No reconnect grace period yet: a dropped connection during a match currently forfeits it.
 - No per-message rate limit on the WebSocket, and the HTTP limiter reads `X-Forwarded-For`, so it expects to run behind a reverse proxy.
 - No push notifications, password reset, or in-app account deletion yet.
-- Tested with the automated suite and in a desktop browser (mobile viewport). The Android debug build compiles, but I have not verified it on a physical device yet.
 
 ## Run it locally
 
@@ -194,7 +195,7 @@ npm run android   # build, sync, open Android Studio
 npm run ios       # macOS only (run `npx cap add ios` first)
 ```
 
-Release builds expect an HTTPS/WSS server. To try a debug build against a plain-HTTP server on your LAN, temporarily add `"server": { "androidScheme": "http", "cleartext": true }` to `capacitor.config.json` and `android:usesCleartextTraffic="true"` to the `<application>` tag of `AndroidManifest.xml` - never ship that.
+Release builds expect an HTTPS/WSS server. To try a debug build against a plain-HTTP server on your LAN, temporarily add `"server": { "androidScheme": "http", "cleartext": true }` to `capacitor.config.json` and `android:usesCleartextTraffic="true"` to the `<application>` tag of `AndroidManifest.xml`. These settings are for local debug builds only and must not be used in a release build.
 
 ## Project structure
 

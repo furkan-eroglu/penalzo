@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <b>Arkadaşlar arasındaki "ne yapalım?" tartışmalarını çözen gerçek zamanlı 3D penaltı oyunu.</b><br/>
+  <b>Arkadaşların birlikte karar vermesi için gerçek zamanlı 3D penaltı oyunu.</b><br/>
   Mobil öncelikli (Android / iOS / tarayıcı) &middot; yetkili Node.js sunucusu &middot; Three.js
 </p>
 
@@ -14,7 +14,7 @@
 Arkadaşlar karar veremediğinde yazı-tura atar ya da taş-kağıt-makas oynar. **Penalzo** bunun yerine penaltı düellosu oynatır:
 biri şut çeker, diğeri kaleye geçer, sonra roller değişir; ikisi de 5'er atış yapar.
 Her iki oyuncu da 5 saniye içinde kalenin üç bölgesinden birini (sol / orta / sağ) gizlice seçer.
-Aynı bölge = kurtarış, farklı bölge = gol. Bilerek basit tutuldu.
+Aynı bölge = kurtarış, farklı bölge = gol. Kurallar bilinçli olarak sade tutulmuştur.
 
 ## Görüntüler
 
@@ -63,7 +63,7 @@ Tek bir Node.js süreci REST uçlarını, WebSocket oyun protokolünü ve derlen
 - Maç sırasında odadan ayrılan oyuncu hükmen yenilir; çevrimiçi durum değişiklikleri arkadaşlara anlık iletilir.
 - `npm test`: gerçek WebSocket istemcileriyle 28 doğrulamalık uçtan uca test (kayıt, arkadaşlık, davet, oda, maç kuralları, erken bitiş, seri penaltı, hükmen galibiyet).
 
-Ayrıntılı protokol, durum makinesi diyagramları ve **bilinen sınırlamalar** için [İngilizce README](README.md#backend-the-interesting-part) bölümüne bakın.
+Ayrıntılı protokol, durum makinesi diyagramları ve **bilinen sınırlamalar** için [İngilizce README](README.md#backend) bölümüne bakın.
 
 ## Çalıştırma
 
