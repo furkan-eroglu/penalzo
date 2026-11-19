@@ -11,9 +11,12 @@
     "server": "node server/index.js",
     "client": "vite",
     "build": "vite build",
+    "build:offline": "vite build --mode offline",
     "start": "node server/index.js",
     "test": "node scripts/e2e.mjs",
+    "test:unit": "node --test scripts/rules.test.mjs scripts/practice.test.mjs",
     "android": "vite build && cap sync android && cap open android",
+    "android:offline": "vite build --mode offline && cap sync android",
     "ios": "vite build && cap sync ios && cap open ios"
   },
   "dependencies": {
