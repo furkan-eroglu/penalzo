@@ -59,7 +59,7 @@ The in-game UI is currently in Turkish.
 
 - **Offline build:** practice against the bot and the character editor work without any server. Multiplayer (rooms, friends, invites) needs a deployed server, which this build does not connect to.
 - **Debug-signed:** Android will ask you to allow installation from unknown sources.
-- Checked on an Android 17 emulator (API 37): launch, menu, editor, a full touch-controlled match.
+- Tested on a physical Android phone and on an Android 17 emulator (API 37): launch, menu, editor, a full touch-controlled match.
 
 ## Features
 

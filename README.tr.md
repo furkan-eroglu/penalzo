@@ -49,7 +49,7 @@ Aynı bölge = kurtarış, farklı bölge = gol. Kurallar bilinçli olarak sade 
 
 - **Çevrimdışı sürüm:** bota karşı oynama ve oyuncu düzenleme sunucusuz çalışır. Çok oyunculu mod (oda, arkadaş, davet) yayında bir sunucu gerektirir, bu sürüm sunucuya bağlanmaz.
 - **Debug imzalı:** Android, bilinmeyen kaynaklardan kuruluma izin vermeni isteyecek.
-- Android 17 emülatöründe (API 37) denendi: açılış, menü, düzenleyici ve dokunmayla oynanan tam bir maç.
+- Gerçek bir Android telefonda ve Android 17 emülatöründe (API 37) denendi: açılış, menü, düzenleyici ve dokunmayla oynanan tam bir maç.
 
 ## Özellikler
 
